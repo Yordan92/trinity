@@ -28,20 +28,12 @@ using std::vector;
 
 bool Plane::intersect(Ray ray, IntersectionData& data)
 {
-	// intersect a ray with a XZ plane:
-	// if the ray is pointing to the horizon, or "up", but the plane is below us,
-	// of if the ray is pointing down, and the plane is above us, we have no intersection
-	if ((ray.start.y > y && ray.dir.y > -1e-9) || (ray.start.y < y && ray.dir.y < 1e-9))
-		return false;
+	if (ray.dir.y >= 0) return false;
 	else {
 		double yDiff = ray.dir.y;
 		double wantYDiff = ray.start.y - this->y;
 		double mult = wantYDiff / -yDiff;
-		
-		// if the distance to the intersection (mult) doesn't optimize our current distance, bail out:
 		if (mult > data.dist) return false;
-		
-		// calculate intersection:
 		data.p = ray.start + ray.dir * mult;
 		data.dist = mult;
 		data.normal = Vector(0, 1, 0);
@@ -68,7 +60,6 @@ bool Sphere::intersect(Ray ray, IntersectionData& info)
 	if (sol < 0) sol = x1; // ... but if it's behind us, opt for the other one
 	if (sol < 0) return false; // ... still behind? Then the whole sphere is behind us - no intersection.
 	
-	// if the distance to the intersection doesn't optimize our current distance, bail out:
 	if (sol > info.dist) return false;
 	
 	info.dist = sol;
@@ -81,11 +72,11 @@ bool Sphere::intersect(Ray ray, IntersectionData& info)
 	return true;
 }
 
-inline bool Cube::intersectCubeSide(const Ray& ray, const Vector& center, IntersectionData& data)
+static bool intersectCubeSide(const Ray& ray, const Vector& center, double sideLength, IntersectionData& data)
 {
 	if (fabs(ray.dir.y) < 1e-9) return false;
 
-	double halfSide = this->side * 0.5;
+	double halfSide = sideLength * 0.5;
 	bool found = false;
 	for (int side = -1; side <= 1; side += 2) {
 		double yDiff = ray.dir.y;
@@ -110,18 +101,13 @@ inline bool Cube::intersectCubeSide(const Ray& ray, const Vector& center, Inters
 
 bool Cube::intersect(Ray ray, IntersectionData& data)
 {
-	// check for intersection with the negative Y and positive Y sides
-	bool found = intersectCubeSide(ray, center, data);
-	
-	// check for intersection with the negative X and positive X sides
-	if (intersectCubeSide(project(ray, 1, 0, 2), project(center, 1, 0, 2), data)) {
+	bool found = intersectCubeSide(ray, center, side, data);
+	if (intersectCubeSide(project(ray, 1, 0, 2), project(center, 1, 0, 2), side, data)) {
 		found = true;
 		data.normal = unproject(data.normal, 1, 0, 2);
 		data.p = unproject(data.p, 1, 0, 2);
 	}
-
-	// check for intersection with the negative Z and positive Z sides
-	if (intersectCubeSide(project(ray, 0, 2, 1), project(center, 0, 2, 1), data)) {
+	if (intersectCubeSide(project(ray, 0, 2, 1), project(center, 0, 2, 1), side, data)) {
 		found = true;
 		data.normal = unproject(data.normal, 0, 2, 1);
 		data.p = unproject(data.p, 0, 2, 1);
@@ -130,8 +116,7 @@ bool Cube::intersect(Ray ray, IntersectionData& data)
 	return found;
 }
 
-// find all intersections of a ray with a geometry, storing the intersection points in the vector `l'
-void CsgOp::findAllIntersections(Geometry* geom, Ray ray, vector<IntersectionData>& l)
+static void findAllIntersections(Geometry* geom, Ray ray, vector<IntersectionData>& l)
 {
 	double currentLength = 0;
 	while (1) {
@@ -154,7 +139,6 @@ bool CsgOp::intersect(Ray ray, IntersectionData& data)
 	findAllIntersections(left, ray, L);
 	findAllIntersections(right, ray, R);
 	
-	// concatenate L an R, and sort them by distance along the ray:
 	all = L;
 	for (int i = 0; i < (int) R.size(); i++)
 		all.push_back(R[i]);
@@ -162,7 +146,6 @@ bool CsgOp::intersect(Ray ray, IntersectionData& data)
 	std::sort(all.begin(), all.end(),
 		[] (const IntersectionData& a, const IntersectionData& b) { return a.dist < b.dist; });
 	
-	// if we have an even number of intersections -> we're outside the object. If odd, we're inside:
 	bool inL, inR;
 	inL = L.size() % 2 == 1;
 	inR = R.size() % 2 == 1;
@@ -170,14 +153,11 @@ bool CsgOp::intersect(Ray ray, IntersectionData& data)
 	for (int i = 0; i < (int) all.size(); i++) {
 		IntersectionData& current = all[i];
 		
-		// at each intersection, we flip the `insidedness' of one of the two variables:
 		if (current.g == left)
 			inL = !inL;
 		else
 			inR = !inR;
 		
-		// if we entered the CSG just now, and this optimizes the current data.dist ->
-		// then we've found the intersection.
 		if (boolOp(inL, inR)) {
 			if (current.dist > data.dist) return false;
 			data = current;

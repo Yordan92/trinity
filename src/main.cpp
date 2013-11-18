@@ -37,7 +37,6 @@ vector<Shader*> shaders;
 vector<Node*> nodes;
 
 
-/// traces a ray in the scene and returns the visible light that comes from that direction
 Color raytrace(Ray ray)
 {
 	IntersectionData data;
@@ -64,8 +63,6 @@ Color raytrace(Ray ray)
 	return closestNode->shader->shade(ray, data);
 }
 
-/// checks for visibility between points `from' and `to'
-/// (from is assumed to be near a surface, whereas to is near a light)
 bool testVisibility(const Vector& from, const Vector& to)
 {
 	Ray ray;
@@ -104,26 +101,26 @@ void initializeScene(void)
 	
 	camera->beginFrame();
 	
-	lightPos = Vector(-90, 700, 350);
+	lightPos = Vector(-90, 70, 350);
 	lightColor = Color(1, 1, 1);
-	lightPower = 800000;
-	ambientLight = Color(0.2, 0.2, 0.2);
+	lightPower = 350000;
+	ambientLight = Color(0.25, 0.25, 0.25);
 	
 	Plane* plane = new Plane(-0.01);
 	geometries.push_back(plane);
 	
-	Texture* texture = new BitmapTexture("data/floor.bmp", 0.005);
+<<<<<<< HEAD
+//	Texture* texture = new BitmapTexture("data/floor.bmp", 0.005);
 	Checker* checker = new Checker(Color(1, 1, 1), Color(0, 0, 0), 35);
+	Lambert* lambert = new Lambert(Color(1, 1, 1), checker);
+=======
+	Texture* texture = new BitmapTexture("data/floor.bmp", 0.005);
 	Lambert* lambert = new Lambert(Color(1, 1, 1), texture);
+>>>>>>> parent of 95097f0... Pre merge
 	Node* floor = new Node(plane, lambert);
 	shaders.push_back(lambert);
 	nodes.push_back(floor);
-
-	Texture* world = new BitmapTexture("data/world.bmp", 2);
 	
-	Sphere* sphere = new Sphere(Vector(100, 50, 320), 50);
-	Lambert* sphereshader = new Lambert(Color(1,1,1), world);
-	createNode(sphere, sphereshader);
 	
 	
 //	for (int i = 0; i < 3; i++)
@@ -134,15 +131,14 @@ void initializeScene(void)
 		new Sphere(Vector(-100, 60, 200), 70)
 	);
 	
-	createNode(diff, new Phong(Color(0.5, 0.5, 0), 60, 1));
+	createNode(diff, new Phong(Color(1,1, 0), 60, 1));
 
 	for (int i = 0; i < 3; i++)
-		createNode(new Sphere(Vector(100, 15, 256 - 50*i), 15), new Phong(Color(0, 0, 0.6), 80, 1));
+		createNode(new Sphere(Vector(100, 15, 256 - 50*i), 15), new Phong(Color(0, 0, 1), 80, 1));
 }
 
 bool needsAA[VFB_MAX_SIZE][VFB_MAX_SIZE];
 
-/// checks if two colors are "too different":
 inline bool tooDifferent(const Color& a, const Color& b)
 {
 	const float THRESHOLD = 0.1;
@@ -228,7 +224,6 @@ void renderScene(void)
 	}
 }
 
-/// handle a mouse click
 void handleMouse(SDL_MouseButtonEvent *mev)
 {
 	if (mev->button != 1) return; // only consider the left mouse button

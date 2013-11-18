@@ -20,47 +20,30 @@
 #ifndef __GEOMETRY_H__
 #define __GEOMETRY_H__
 
-#include <vector>
 #include "vector.h"
 
-/// a structure, that holds info about an intersection. Filled in by Geometry::intersect() methods
 class Geometry;
 struct IntersectionData {
-	Vector p; //!< intersection point in the world-space
-	Vector normal; //!< the normal of the geometry at the intersection point
-	double dist; //!< before intersect(): the max dist to look for intersection; after intersect() - the distance found
+	Vector p;
+	Vector normal;
+	double dist;
 	
-	double u, v; //!< 2D UV coordinates for texturing, etc.
+	double u, v;
 	
-	Geometry* g; //!< The geometry which was hit
+	Geometry* g;
 };
 
-/// An abstract class, that describes a geometry in the scene.
+
 class Geometry {
 public:
 	virtual ~Geometry() {}
-
-	/**
-	 *  @brief Intersect a geometry with a ray.
-	 *  Returns true if an intersection is found, and it was closer than the current value of data.dist.
-	 * 
-	 *  @param ray - the ray to be traced
-	 *  @param data - in the event an intersection is found, this is filled with info about the intersection point.
-	 *  NOTE: the intersect() function MUST NOT touch any member of data, before it can prove the intersection
-	 *        point will be closer to the current value of data.dist!
-	 *  Note that this also means that if you want to find any intersection, you must initialize data.dist before
-	 *  calling intersect. E.g., if you don't care about distance to intersection, initialize data.dist with 1e99
-	 *
-	 * @retval true if an intersection is found. The `data' struct should be filled in.
-	 * @retval false if no intersection exists, or it is further than the current data.dist. In this case,
-	 *         the `data' struct should remain unchanged.
-	 */
+	
 	virtual bool intersect(Ray ray, IntersectionData& data) = 0;
-	virtual const char* getName() = 0; //!< a virtual function, which returns the name of a geometry
+	virtual const char* getName() = 0;
 };
 
 class Plane: public Geometry {
-	double y; //!< y-intercept. The plane is parallel to XZ, the y-intercept is at this value
+	double y;
 public:
 	Plane(double _y) { y = _y; }
 	
@@ -81,7 +64,6 @@ public:
 class Cube: public Geometry {
 	Vector center;
 	double side;
-	inline bool intersectCubeSide(const Ray& ray, const Vector& center, IntersectionData& data);
 public:
 	Cube(const Vector& center, double side): center(center), side(side) {}
 
@@ -91,7 +73,6 @@ public:
 
 class CsgOp: public Geometry {
 	Geometry *left, *right;
-	void findAllIntersections(Geometry* geom, Ray ray, std::vector<IntersectionData>& l);
 public:
 	CsgOp(Geometry* left, Geometry* right) : left(left), right(right) {}
 	
@@ -126,7 +107,6 @@ public:
 
 class Shader;
 
-/// A Node, which holds a geometry, linked to a shader.
 class Node {
 public:
 	Geometry* geom;
